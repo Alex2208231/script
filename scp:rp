@@ -1,0 +1,16 @@
+while wait(1) do
+   spawn(function()
+   if game.Players.LocalPlayer.Character == "nil" then repeat wait() until not game.Players.LocalPlayer.Character == "nil" end
+
+   game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-25, 88, 223)
+   wait(.1)
+   game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-33, 88, 237)
+   wait(.2)
+   local ohString1 = "Class - D"
+   local ohBoolean2 = true
+   local ohBoolean3 = false
+
+   game:GetService("ReplicatedStorage").Remotes.Spawn:InvokeServer(ohString1, ohBoolean2, ohBoolean3)
+   wait(3)
+end)
+end
