@@ -1,0 +1,182 @@
+-- Obtain necessary services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+-- Global variable to control the teleport loop
+_G.TeleportLoop = false  -- Start disabled initially
+local targetPlayerName = ""  -- Initialize target player name
+
+-- Function to find the target player by username (partial match)
+local function getTargetPlayer(username)
+    local usernameLower = username:lower()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Name:lower():match(usernameLower) then
+            return player
+        end
+    end
+    return nil
+end
+
+-- Function to teleport the local player a specified distance behind the target player
+local function teleportBehindTarget(localRootPart, targetRootPart, distance)
+    local direction = (localRootPart.Position - targetRootPart.Position).unit
+    local newPosition = targetRootPart.Position - direction * distance
+    localRootPart.CFrame = CFrame.new(newPosition)
+end
+
+-- Function to create or update the GUI
+local function createOrUpdateGUI()
+    -- Check if GUI already exists
+    local localPlayer = Players.LocalPlayer
+    local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui")
+    if not playerGui then
+        playerGui = Instance.new("PlayerGui")
+        playerGui.Name = "PlayerGui"
+        playerGui.Parent = localPlayer
+    end
+    
+    local existingGui = playerGui:FindFirstChild("TeleportScreenGui")
+    if existingGui then
+        existingGui:Destroy()  -- Destroy existing GUI to prevent duplication
+    end
+    
+    -- Create ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "TeleportScreenGui"
+    screenGui.Parent = playerGui
+    
+    -- Create GUI frame
+    local guiFrame = Instance.new("Frame")
+    guiFrame.Name = "TeleportGUI"
+    guiFrame.Size = UDim2.new(0, 300, 0, 180)
+    guiFrame.Position = UDim2.new(0.5, -150, 0.5, -90)
+    guiFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    guiFrame.BorderSizePixel = 2
+    guiFrame.Active = true
+    guiFrame.Draggable = true  -- Make the GUI draggable
+    guiFrame.Parent = screenGui
+    guiFrame.Visible = true  -- Start with the GUI visible
+    
+    -- Title label
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "Title"
+    titleLabel.Size = UDim2.new(1, 0, 0.2, 0)
+    titleLabel.Position = UDim2.new(0, 0, 0, 0)
+    titleLabel.Text = "SFT SCRIPT"
+    titleLabel.Font = Enum.Font.Cartoon
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Parent = guiFrame
+    titleLabel.TextScaled = true  -- Allow text to scale with size
+    titleLabel.TextStrokeTransparency = 0  -- Show text stroke
+    titleLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)  -- Black stroke
+    titleLabel.TextSize = 24  -- Increase text size
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Center  -- Center align text
+    titleLabel.TextYAlignment = Enum.TextYAlignment.Center  -- Center align text
+
+    -- Target player label and input
+    local targetLabel = Instance.new("TextLabel")
+    targetLabel.Name = "TargetLabel"
+    targetLabel.Size = UDim2.new(1, 0, 0, 20)
+    targetLabel.Position = UDim2.new(0, 0, 0.25, 10)
+    targetLabel.Text = "Target Player:"
+    targetLabel.Font = Enum.Font.Cartoon
+    targetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    targetLabel.BackgroundTransparency = 1
+    targetLabel.Parent = guiFrame
+    
+    local targetInput = Instance.new("TextBox")
+    targetInput.Name = "TargetInput"
+    targetInput.Size = UDim2.new(1, -20, 0, 30)
+    targetInput.Position = UDim2.new(0, 10, 0.3, 0)
+    targetInput.Text = ""
+    targetInput.Font = Enum.Font.Cartoon
+    targetInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    targetInput.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    targetInput.BorderSizePixel = 0
+    targetInput.ClearTextOnFocus = false
+    targetInput.Parent = guiFrame
+    
+    -- Enable Farm button
+    local enableButton = Instance.new("TextButton")
+    enableButton.Name = "EnableButton"
+    enableButton.Size = UDim2.new(0.4, 0, 0.2, 0)
+    enableButton.Position = UDim2.new(0.3, 0, 0.7, -10)
+    enableButton.Text = "Enable Farm"
+    enableButton.Font = Enum.Font.Cartoon
+    enableButton.TextSize = 18  -- Increase text size
+    enableButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    enableButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+    enableButton.BorderSizePixel = 0
+    enableButton.TextScaled = true
+    enableButton.Parent = guiFrame
+    
+    -- Function to toggle _G.TeleportLoop and start farming
+    local function toggleFarm()
+        if _G.TeleportLoop then
+            _G.TeleportLoop = false
+            enableButton.Text = "Enable Farm"
+        else
+            local targetName = targetInput.Text
+            local foundPlayer = getTargetPlayer(targetName)
+            if foundPlayer then
+                _G.TeleportLoop = true
+                targetPlayerName = foundPlayer.Name
+                enableButton.Text = "Disable Farm"
+            else
+                warn("Player not found or name not unique enough.")
+            end
+        end
+    end
+
+    enableButton.MouseButton1Click:Connect(toggleFarm)
+
+    -- Function to handle right alt input to show/hide the GUI
+    local function handleInput(input)
+        if input.KeyCode == Enum.KeyCode.RightAlt then
+            guiFrame.Visible = not guiFrame.Visible
+        end
+    end
+
+    -- Connect the input handler function to UserInputService's input events
+    UserInputService.InputBegan:Connect(handleInput)
+end
+
+-- Call createOrUpdateGUI initially
+createOrUpdateGUI()
+
+-- Function to teleport the local player behind the target player
+local function main()
+    while true do
+        if _G.TeleportLoop and targetPlayerName ~= "" then
+            local localPlayer = Players.LocalPlayer
+            local localCharacter = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+            local localRootPart = localCharacter:WaitForChild("HumanoidRootPart")
+            local targetPlayer = getTargetPlayer(targetPlayerName)
+            
+            if targetPlayer then
+                local targetCharacter = targetPlayer.Character
+                local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
+                local targetRootPart = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
+        
+                if targetHumanoid and targetRootPart then
+                    teleportBehindTarget(localRootPart, targetRootPart, 3) -- Teleport 3 studs behind the target
+                end
+            else
+                warn("Target player not found or their character is not loaded.")
+            end
+        end
+        
+        wait(0.5) -- Check every 0.5 seconds
+    end
+end
+
+-- Run the main function in a coroutine to handle local player respawns seamlessly
+Players.LocalPlayer.CharacterAdded:Connect(function(character)
+    -- Delay GUI creation to ensure character is fully loaded
+    wait(1)
+    createOrUpdateGUI()
+end)
+
+-- Run the main function in a coroutine to handle local player respawns seamlessly
+coroutine.wrap(main)()
